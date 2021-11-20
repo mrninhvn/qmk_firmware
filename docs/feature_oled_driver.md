@@ -30,7 +30,6 @@ OLED_ENABLE = yes
 |OLED Driver        |Supported Device           |
 |-------------------|---------------------------|
 |SSD1306 (default)  |For both SSD1306 and SH1106|
-|SH1107             |For SH1107                 |
 
 e.g.
 ```make
@@ -41,7 +40,7 @@ Then in your `keymap.c` file, implement the OLED task call. This example assumes
 
 ```c
 #ifdef OLED_ENABLE
-void oled_task_user(void) {
+bool oled_task_user(void) {
     // Host Keyboard Layer Status
     oled_write_P(PSTR("Layer: "), false);
 
@@ -65,6 +64,8 @@ void oled_task_user(void) {
     oled_write_P(led_state.num_lock ? PSTR("NUM ") : PSTR("    "), false);
     oled_write_P(led_state.caps_lock ? PSTR("CAP ") : PSTR("    "), false);
     oled_write_P(led_state.scroll_lock ? PSTR("SCR ") : PSTR("    "), false);
+    
+    return false;
 }
 #endif
 ```
@@ -136,18 +137,24 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation) {
     return rotation;
 }
 
-void oled_task_user(void) {
+bool oled_task_user(void) {
     if (is_keyboard_master()) {
         render_status();  // Renders the current keyboard state (layer, lock, caps, scroll, etc)
     } else {
         render_logo();  // Renders a static logo
         oled_scroll_left();  // Turns on scrolling
     }
+    return false;
 }
 #endif
 ```
 
 ## Basic Configuration
+
+These configuration options should be placed in `config.h`. Example:
+```c
+#define OLED_BRIGHTNESS 128
+```
 
 |Define                     |Default          |Description                                                                                                               |
 |---------------------------|-----------------|--------------------------------------------------------------------------------------------------------------------------|
@@ -189,6 +196,8 @@ void oled_task_user(void) {
 
 
 ### 90 Degree Rotation - Technical Mumbo Jumbo
+
+!> Rotation is unsupported on the SH1106.
 
 ```c
 // OLED Rotation enum values are flags
@@ -242,6 +251,7 @@ bool oled_init(oled_rotation_t rotation);
 // Called at the start of oled_init, weak function overridable by the user
 // rotation - the value passed into oled_init
 // Return new oled_rotation_t if you want to override default rotation
+oled_rotation_t oled_init_kb(oled_rotation_t rotation);
 oled_rotation_t oled_init_user(oled_rotation_t rotation);
 
 // Clears the display buffer, resets cursor position to 0, and sets the buffer to dirty for rendering
@@ -333,7 +343,8 @@ uint8_t oled_get_brightness(void);
 void oled_task(void);
 
 // Called at the start of oled_task, weak function overridable by the user
-void oled_task_user(void);
+bool oled_task_kb(void);
+bool oled_task_user(void);
 
 // Set the specific 8 lines rows of the screen to scroll.
 // 0 is the default for start, and 7 for end, which is the entire
