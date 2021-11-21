@@ -65,8 +65,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define OLED_BLOCK_SIZE (OLED_MATRIX_SIZE / OLED_BLOCK_COUNT)
 #define OLED_COM_PINS COM_PINS_ALT
 #define OLED_IC OLED_IC_SH1107
-#define OLED_BRIGHTNESS 255
-#define OLED_TIMEOUT 15000
+#define OLED_BRIGHTNESS 200
+#define OLED_TIMEOUT 30000
 #define OLED_UPDATE_INTERVAL 200
 
 // #define RGBLIGHT_ANIMATIONS
