@@ -16,7 +16,39 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include QMK_KEYBOARD_H
 #include <stdio.h>
+
 char wpm_str[10];
+
+/* Enable potentiometer */
+#define POT_ENABLE
+
+#ifdef POT_ENABLE
+#include "analog.h"
+
+#define POT_TOLERANCE 12
+
+#define POT_A_INPUT A1
+#define POT_B_INPUT A0
+
+// Constant value definitions
+
+#define ADC_HYSTERESIS  20        // Must be 1 or higher. Noise filter, determines how big ADC change needed
+#define POT_SENSITIVITY 8        // Higher number = more turns needed to reach max value
+
+#define ADC_MAX_VALUE 1023
+
+// Variables for potmeter
+int ValuePotA = 0;            // Pot1 tap A value
+int ValuePotB = 0;            // Pot1 tap B value
+int PreviousValuePotA = 0;    // Used to remember last value to determine turn direction
+int PreviousValuePotB = 0;    // Used to remember last value to determine turn direction
+int8_t DirPotA = 1;              // Direction for Pot 1 tap A
+int8_t DirPotB = 1;              // Direction for Pot1 tap B
+
+int8_t PotDirection  = 1;        // Final CALCULATED direction
+int PotValue = 0;
+int OldPotValue = 0;
+#endif
 
 
 // Each layer gets a name for readability, which is then used in the keymap matrix below.
@@ -35,7 +67,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[_BASE] = LAYOUT_default(
 		KC_GESC, KC_GRV, KC_1, KC_2, KC_3, KC_4, KC_5, KC_6, KC_7, KC_8, KC_9, KC_0, KC_MINS, KC_EQL, KC_BSPC,
 		KC_PGUP,  KC_TAB, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_LBRC, KC_RBRC, KC_BSLS,
-		KC_PGDN,  KC_CAPS, KC_A, KC_S, KC_D, KC_F, KC_G, KC_H, KC_J, KC_K, KC_L, KC_SCLN, KC_QUOT, KC_ENT, KC_HOME,
+		KC_PGDN,  KC_CAPS, KC_A, KC_S, KC_D, KC_F, KC_G, KC_H, KC_J, KC_K, KC_L, KC_SCLN, KC_QUOT, KC_ENT, KC_MUTE,
 		          KC_LSFT, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, KC_RSFT, KC_UP,
 		          KC_LCTL, KC_LGUI, KC_LALT, KC_SPC, KC_SPC, KC_RALT, KC_RGUI, KC_RCTL, KC_LEFT, KC_DOWN, KC_RGHT
     ),
@@ -49,6 +81,136 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     )
 };
 
+#ifdef POT_ENABLE
+void read_pot(void) {
+	ValuePotA  = analogReadPin(POT_A_INPUT);
+  ValuePotB  = analogReadPin(POT_B_INPUT);
+	/****************************************************************************
+  * Step 1 decode each  individual pot tap's direction
+  ****************************************************************************/
+  // First check direction for Tap A
+  if (ValuePotA > (PreviousValuePotA + ADC_HYSTERESIS))       // check if new reading is higher (by <debounce value>), if so...
+  {
+    DirPotA = 1;                                              // ...direction of tap A is up
+  }
+  else if (ValuePotA < (PreviousValuePotA - ADC_HYSTERESIS))  // check if new reading is lower (by <debounce value>), if so...
+  {
+    DirPotA = -1;                                             // ...direction of tap A is down
+  }
+  else
+  {
+    DirPotA = 0;                                              // No change
+  }
+  // then check direction for tap B
+  if (ValuePotB > (PreviousValuePotB + ADC_HYSTERESIS))       // check if new reading is higher (by <debounce value>), if so...
+  {
+    DirPotB = 1;                                              // ...direction of tap B is up
+  }
+  else if (ValuePotB < (PreviousValuePotB - ADC_HYSTERESIS))  // check if new reading is lower (by <debounce value>), if so...
+  {
+    DirPotB = -1;                                             // ...direction of tap B is down
+  }
+  else
+  {
+    DirPotB = 0;                                              // No change
+  }
+
+  /****************************************************************************
+  * Step 2: Determine actual direction of ENCODER based on each individual
+  * potentiometer tap´s direction and the phase
+  ****************************************************************************/
+  if (DirPotA == -1 && DirPotB == -1)       //If direction of both taps is down
+  {
+    if (ValuePotA > ValuePotB)               // If value A above value B...
+    {
+      PotDirection = 1;                         // ...direction is up
+    }
+    else
+    {
+      PotDirection = -1;                        // otherwise direction is down
+    }
+  }
+  else if (DirPotA == 1 && DirPotB == 1)    //If direction of both taps is up
+  {
+    if (ValuePotA < ValuePotB)               // If value A below value B...
+    {
+      PotDirection = 1;                         // ...direction is up
+    }
+    else
+    {
+      PotDirection = -1;                        // otherwise direction is down
+    }
+  }
+  else if (DirPotA == 1 && DirPotB == -1)   // If A is up and B is down
+  {
+    if ( (ValuePotA > (ADC_MAX_VALUE/2)) || (ValuePotB > (ADC_MAX_VALUE/2)) )  //If either pot at upper range A/B = up/down means direction is up
+    {
+      PotDirection = 1;
+    }
+    else                                     //otherwise if both pots at lower range A/B = up/down means direction is down
+    {
+      PotDirection = -1;
+    }
+  }
+  else if (DirPotA == -1 && DirPotB == 1)
+  {
+    if ( (ValuePotA < (ADC_MAX_VALUE/2)) || (ValuePotB < (ADC_MAX_VALUE/2)))   //If either pot  at lower range, A/B = down/up means direction is down
+    {
+      PotDirection = 1;
+    }
+    else                                     //otherwise if bnoth pots at higher range A/B = up/down means direction is down
+    {
+      PotDirection = -1;
+    }
+  }
+  else
+  {
+    PotDirection = 0;                           // if any of tap A or B has status unchanged (0), indicate unchanged
+  }
+
+  /****************************************************************************
+  * Step 3: Calculate value based on direction, how big change in ADC value,
+  * and sensitivity. Avoid values around zero and max  as value has flat region
+  ****************************************************************************/
+  if (DirPotA != 0 && DirPotB != 0)         //If both taps indicate movement
+  {
+    if ((ValuePotA < ADC_MAX_VALUE*0.8) && (ValuePotA > ADC_MAX_VALUE*0.2))         // if tap A is not at endpoints
+    {
+      PotValue = PotValue + PotDirection*abs(ValuePotA - PreviousValuePotA)/POT_SENSITIVITY; //increment value
+    }
+    else                                    // If tap A is close to end points, use tap B to calculate value
+    {
+      PotValue = PotValue + PotDirection*abs(ValuePotB - PreviousValuePotB)/POT_SENSITIVITY;  //Make sure to add/subtract at least 1, and then additionally the jump in voltage
+    }
+    PreviousValuePotA = ValuePotA;          // Update previous value variable
+    PreviousValuePotB = ValuePotB;          // Update previous value variable
+  }
+}
+#endif
+
+void matrix_init_user(void) {
+#ifdef POT_ENABLE
+	PreviousValuePotA  = analogReadPin(POT_A_INPUT);
+  PreviousValuePotB  = analogReadPin(POT_B_INPUT);
+#endif
+}
+
+void matrix_scan_user(void) {
+#ifdef POT_ENABLE
+		read_pot();
+		if (abs(PotValue - OldPotValue) > POT_TOLERANCE) {
+			if (PotDirection == 1) {
+				tap_code_delay(KC_VOLD, 10);
+			}
+			else if (PotDirection == -1) {
+				tap_code_delay(KC_VOLU, 10);
+			}
+			OldPotValue = PotValue;
+      PotValue = 0;
+		}
+#endif
+}
+
 #ifdef OLED_ENABLE
 
 #define IDLE_FRAMES 5
@@ -59,9 +221,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 #define TAP_FRAMES 2
 #define TAP_SPEED 40  // above this wpm value typing animation to trigger
 
-#    define ANIM_FRAME_DURATION 200  // how long each frame lasts in ms
+#define ANIM_FRAME_DURATION 200  // how long each frame lasts in ms
 // #define SLEEP_TIMER 60000 // should sleep after this period of 0 wpm, needs fixing
-#    define ANIM_SIZE 1024  // number of bytes in array, minimize for adequate firmware size, max is 1024
+#define ANIM_SIZE 1024  // number of bytes in array, minimize for adequate firmware size, max is 1024
 
 uint32_t anim_timer         = 0;
 uint32_t anim_sleep         = 0;
@@ -167,7 +329,7 @@ static void render_anim(void) {
         }
     }
     if (get_current_wpm() != 000) {
-        oled_on();  // not essential but turns on animation OLED with any alpha keypress
+        // oled_on();  // not essential but turns on animation OLED with any alpha keypress
         if (timer_elapsed32(anim_timer) > ANIM_FRAME_DURATION) {
             anim_timer = timer_read32();
             animation_phase();
@@ -175,7 +337,7 @@ static void render_anim(void) {
         anim_sleep = timer_read32();
     } else {
         if (timer_elapsed32(anim_sleep) > OLED_TIMEOUT) {
-            oled_off();
+            // oled_off();
         } else {
             if (timer_elapsed32(anim_timer) > ANIM_FRAME_DURATION) {
                 anim_timer = timer_read32();
