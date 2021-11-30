@@ -69,10 +69,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define OLED_TIMEOUT 30000
 #define OLED_UPDATE_INTERVAL 200
 
-// #define RGBLIGHT_ANIMATIONS
-// #define RGB_DI_PIN B15
-// #define RGBLED_NUM 20
-// #define WS2812_SPI SPID2
+/* RGB UNDERGLOW */
+#define RGBLIGHT_ANIMATIONS
+#define RGB_DI_PIN B13
+#define RGBLED_NUM 16
+#define RGBLIGHT_LAYERS
+#define RGBLIGHT_LAYERS_OVERRIDE_RGB_OFF
 
 /*
  * Feature disable options

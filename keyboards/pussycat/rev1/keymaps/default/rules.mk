@@ -1,0 +1,1 @@
+SRC += potentiometer.c oled.c led.c

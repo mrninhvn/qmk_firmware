@@ -17,16 +17,11 @@ SLEEP_LED_ENABLE = no       # Breathing sleep LED during USB suspend
 # if this doesn't work, see here: https://github.com/tmk/tmk_keyboard/wiki/FAQ#nkro-doesnt-work
 NKRO_ENABLE = yes	      # USB Nkey Rollover
 BACKLIGHT_ENABLE = no
-RGBLIGHT_ENABLE = no
+RGBLIGHT_ENABLE = yes
 OLED_ENABLE = yes
 OLED_DRIVER = SH1107
 WPM_ENABLE = yes
-# Enable potentiometer
-# POT_ENABLE = yes
 # Include ananlog driver
 SRC += analog.c
 # Enter lower-power sleep mode when on the ChibiOS idle thread
 OPT_DEFS += -DCORTEX_ENABLE_WFI_IDLE=TRUE
-
-# Enables Link Time Optimization (LTO) when compiling the keyboard
-LTO_ENABLE = yes
