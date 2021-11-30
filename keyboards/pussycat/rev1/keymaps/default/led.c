@@ -38,7 +38,7 @@ const rgblight_segment_t* const PROGMEM rgb_layers[] = RGBLIGHT_LAYERS_LIST(
 );
 
 void keyboard_post_init_user(void) {
-  rgblight_set_effect_range(0, 14);
+  rgblight_set_effect_range(0, 15);
   // Enable the LED layers
   rgblight_layers = rgb_layers;
 }
