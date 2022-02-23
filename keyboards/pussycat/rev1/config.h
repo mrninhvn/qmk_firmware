@@ -77,8 +77,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGBLIGHT_LAYERS_OVERRIDE_RGB_OFF
 
 /* Encoder */
-#define ENCODERS_PAD_A { A1 }
-#define ENCODERS_PAD_B { A0 }
+#define ENCODERS_PAD_A { A0 }
+#define ENCODERS_PAD_B { A1 }
 #define ENCODER_RESOLUTION 4
 
 /*
