@@ -76,6 +76,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RGBLIGHT_LAYERS
 #define RGBLIGHT_LAYERS_OVERRIDE_RGB_OFF
 
+/* Encoder */
+#define ENCODERS_PAD_A { A1 }
+#define ENCODERS_PAD_B { A0 }
+#define ENCODER_RESOLUTION 4
+
 /*
  * Feature disable options
  *  These options are also useful to firmware size reduction.
